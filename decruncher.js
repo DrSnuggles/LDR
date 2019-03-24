@@ -66,9 +66,9 @@ var Decruncher = (function() {
   };
   function renderCopperbars(fullscreen, lines) {
     log("renderCopperbars: "+ currentPos);
-    for (var y = 0; (y < lines && currentPos+y+2 < packedData.length) ; y++) {
+    for (var y = 0; (y < lines && currentPos+2 < packedData.length) ; y++) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgb("+ packedData[currentPos+y] +", "+ packedData[currentPos+y+1] +", "+ packedData[currentPos+y+2] +")";
+      ctx.strokeStyle = "rgb("+ packedData[currentPos] +", "+ packedData[currentPos+1] +", "+ packedData[currentPos+2] +")";
       if (fullscreen || y < lines*0.05 || y > lines*0.95){
         ctx.moveTo(0, y);
         ctx.lineTo(300, y);
