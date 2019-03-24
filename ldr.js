@@ -18,7 +18,7 @@ var LDR = (function() {
     background : true,  // background or foreground
     fullscreen : true,  // fullscreen or border only
   },
-  debug = false,         // duration times will still be displayed in console
+  debug = false,        // duration times will still be displayed in console
   raf,                  // requestAnimationFrame, needed for cancel
   ctx,                  // canvas 2d context so i do not need to get this every frame
   loadedPackers = [],   // already loaded packers, do not load them twice
