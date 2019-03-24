@@ -1,6 +1,7 @@
 /*  LDR (LoadDecrunchRun or Loader) by DrSnuggles
   LDR is the successor of Decrunch.js
   After visualizing decrunching process i also want to show the loading process
+  640x512 = 327680 Pixel. Each needs 3 Bytes for color = 983040Bytes = 960kB = 0.9375MB per screen
 */
 
 "use strict";
@@ -10,14 +11,14 @@ var LDR = (function() {
   // Init
   //
   var my = {            // holds all public available functions/properties
-    version : "0.4",    // version
+    version : "0.1",    // version
     packer : "jszip",   // used depacking library
     visualOutput : true,// enable/disable the whole point of this lib, never set it to false !!! ;)
     lines : 256,        // 256 amiga lines
     background : true,  // background or foreground
     fullscreen : true,  // fullscreen or border only
   },
-  debug = false,        // duration times will still be displayed in console
+  debug = false,         // duration times will still be displayed in console
   raf,                  // requestAnimationFrame, needed for cancel
   ctx,                  // canvas 2d context so i do not need to get this every frame
   loadedPackers = [],   // already loaded packers, do not load them twice
@@ -30,6 +31,9 @@ var LDR = (function() {
   },
   packedData,           // Uint8Array of packed data, used to get line colors
   currentPos,           // position in ^^ for next frame
+  currentX,             // current x position for loader
+  currentY,             // current x position for loader
+  overflow,             // counter how often an modulo has to be done
   CDN = "//cdn.jsdelivr.net/gh/DrSnuggles/Decruncher/";
   CDN = "";             // use local version
 
@@ -59,7 +63,7 @@ var LDR = (function() {
     log("renderCopperbars: "+ currentPos);
     for (var y = 0; (y < lines && currentPos+y+2 < packedData.length) ; y++) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgb("+ packedData[currentPos+y] +", "+ packedData[currentPos+y+1] +", "+ packedData[currentPos+y+2] +")";
+      ctx.strokeStyle = "rgb("+ packedData[currentPos] +", "+ packedData[currentPos+1] +", "+ packedData[currentPos+2] +")";
       if (fullscreen || y < lines*0.05 || y > lines*0.95){
         ctx.moveTo(0, y);
         ctx.lineTo(300, y);
@@ -75,7 +79,75 @@ var LDR = (function() {
     // and again...
     raf = requestAnimationFrame(function(){renderCopperbars(fullscreen, lines)});
   };
+  function startRenderer(background, fullscreen, lines, part) {
+    var canvas = document.createElement('canvas');
+    canvas.id = 'ldrcanvas';
+    var zIndex = background ? -604 : 604;
+    canvas.style = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:'+ zIndex +';';
+    canvas.width = 640;
+    canvas.height = 512;
+    /* too early no info yet
+    if (part.total !== 0) {
+      var tmp = Math.sqrt(part.total/3);
+      log("make use of total size to adjust canvas dimensions: " + tmp +" x "+ tmp);
+      canvas.width = canvas.height = tmp;
+    }
+    */
+    document.body.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    currentX = currentY = currentPos = overflow = 0;
+    raf = requestAnimationFrame(function(){renderRenderer(canvas.width, canvas.height, part)});
+  };
+  function stopRenderer() {
+    document.body.removeChild(ldrcanvas);
+    cancelAnimationFrame(raf);
+  };
+  function renderRenderer(width, height, part) {
+    log("renderRenderer: "+ currentPos);
+    //console.log(part);
+    /* idea:
+      when at the end the whole file is displayed it should fill the screen
+      i want it like former tape loading of screens
+      lines with byte height, line by line like interlaced png
+      640 width x 512 height x 3bytes color = 960kB
+
+      (newLength - currentPos) IS NOT (newData.length/3)
+
+      currentPos = oldLength
+    */
+    var newLength = part.responseText.length;
+    if (newLength !== currentPos) {
+      //console.log("i will paint coz currentpos: "+currentPos+" !== "+ newLength);
+      var newData = part.responseText.substr(currentPos, newLength-currentPos);
+      newData = bin2ab(newData);
+      //log("received bytes: "+ (newLength - currentPos));
+      //log("received bytes: "+ (newData.length));
+      for (var i = 0; i < newData.length; i+=3) {
+        //ctx.beginPath();
+        ctx.fillStyle = "rgb("+ newData[i] +", "+ newData[i+1] +", "+ newData[i+2] +")";
+        ctx.fillRect(currentX, currentY, 1, 1);
+        //ctx.stroke();
+        currentX++;
+        if (currentX >= width) {
+          // go 8 pixels deeper, like interlace
+          currentX = 0;
+          currentY += 8;
+        }
+        if (currentY >= height) {
+          currentY = currentY % height + 1;
+          overflow++; // stop after 8 times do not overwrite old data. makes it faster
+        }
+      }
+      currentPos = newLength; // i don't care if i will lose data here. maybe array is not divable by 3
+    }
+    // and again...
+    if (overflow < 8) { // do not render rest.. makes it slower
+      raf = requestAnimationFrame(function(){renderRenderer(width, height, part)});
+    }
+  };
   function addScript(src, cb) {
+    // .onprogress not possible on script
+    // maybe switch to xhr
     console.time("addScript "+src);
     var script = document.createElement("script");
     script.onload = function(){
@@ -88,16 +160,18 @@ var LDR = (function() {
   function xhr(src, cb, responseType) {
     console.time("XHR load ("+responseType+") "+src);
     var xhr = new XMLHttpRequest();
+    startRenderer(my.background, my.fullscreen, my.lines, xhr);
     xhr.open("GET", src, true);
     if (responseType === "binary") {
       xhr.overrideMimeType('text/plain; charset=x-user-defined');
     } else {
       xhr.responseType = responseType;
     }
-    xhr.onreadystatechange = function(){
-      if (this.readyState == 4 && this.status == 200){
+    xhr.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
         console.timeEnd("XHR load ("+responseType+") "+src);
-        if (responseType === "" || responseType === "text" || responseType === "binary"){
+        stopRenderer();
+        if (responseType === "" || responseType === "text" || responseType === "binary") {
           //log(this.responseText);
           cb(this.responseText);
         } else {
@@ -106,13 +180,18 @@ var LDR = (function() {
         }
       }
     };
+    //could call render process but i want to use raf
     /*
-    xhr.onprogress = function(e){
+    xhr.onprogress = function(e) {
+      log("xhr.onprogress");
+      //raf = requestAnimationFrame(function(){renderRenderer(640, 512, e.target)});
       if (e.lengthComputable) {
-        var percentage = Math.round((e.loaded/e.total)*100);
-        log("percent " + percentage + '%' );
+        //var percentage = Math.round((e.loaded/e.total)*100);
+        //ldrcanvas.width = ldrcanvas.height = Math.ceil(Math.sqrt(e.total/3));
+        //console.log(ldrcanvas.width);
+        //log("percent " + percentage + '%' );
       } else {
-        log("not computable"); // but i have the length in allmods.txt
+        //log("not computable");
       }
     };
     */
@@ -230,107 +309,12 @@ var LDR = (function() {
   };
 
   //
-  // converter helpers
+  // Converter helpers
   //
-  // https://www.html5rocks.com/de/tutorials/file/xhr2/
-  /*
-  function bin2Uint8(data) {
-    // binary --> UInt8Array SLOW !!!!
-    var bytes = Object.keys(data).length;
-    var ret = new Uint8Array(bytes);
-    for(var i = 0; i < bytes; i++) {
-      ret[i] = data[i].charCodeAt(0);
-    }
-    return ret;
-  };
-  function blob2Uint8(data) {
-    // blob -> UInt8
-    var ret;
-    var fileReader = new FileReader();
-    fileReader.onload = function(event) {
-      ret = new Uint8Array(event.target.result);
-      return ret; // lol too late.. and i dont care
-    };
-    fileReader.readAsArrayBuffer(blob);
-  };
-  function Uint82bin(data) {
-    // https://gist.github.com/getify/7325764
-    // ^^ got more uint8 conversions
-    var len = data.length, ret = "";
-    for (var i = 0; i < len; i++) {
-    ret += String.fromCharCode(data[i]);
-  }
-  return ret;
-  };
-  // https://stackoverflow.com/questions/16363419/how-to-get-binary-string-from-arraybuffer
-  function ArrayBufferToString(buffer) {
-    return BinaryToString(String.fromCharCode.apply(null, Array.prototype.slice.apply(new Uint8Array(buffer))));
-  };
-  function StringToArrayBuffer(string) {
-    return StringToUint8Array(string).buffer;
-  };
-  function BinaryToString(binary) {
-    var error;
-    try {
-      return decodeURIComponent(escape(binary));
-    } catch (_error) {
-      error = _error;
-      if (error instanceof URIError) {
-        return binary;
-      } else {
-        throw error;
-      }
-    }
-  };
-  function StringToBinary(string) {
-    var chars, code, i, isUCS2, len, _i;
-    len = string.length;
-    chars = [];
-    isUCS2 = false;
-    for (i = _i = 0; 0 <= len ? _i < len : _i > len; i = 0 <= len ? ++_i : --_i) {
-      code = String.prototype.charCodeAt.call(string, i);
-      if (code > 255) {
-        isUCS2 = true;
-        chars = null;
-        break;
-      } else {
-        chars.push(code);
-      }
-    }
-    if (isUCS2 === true) {
-      return unescape(encodeURIComponent(string));
-    } else {
-      return String.fromCharCode.apply(null, Array.prototype.slice.apply(chars));
-    }
-  };
-  function StringToUint8Array(string) {
-    var binary, binLen, buffer, chars, i, _i;
-    binary = StringToBinary(string);
-    binLen = binary.length;
-    buffer = new ArrayBuffer(binLen);
-    chars  = new Uint8Array(buffer);
-    for (i = _i = 0; 0 <= binLen ? _i < binLen : _i > binLen; i = 0 <= binLen ? ++_i : --_i) {
-      chars[i] = String.prototype.charCodeAt.call(binary, i);
-    }
-    return chars;
-  };
-  function ab2str_old(buf) {
-    // https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
-    return String.fromCharCode.apply(null, new Uint16Array(buf));
-  };
-  // https://stackoverflow.com/questions/6965107/converting-between-strings-and-arraybuffers
-  function ab2str(data) {
-  var enc = new TextDecoder("utf-8");
-  return enc.decode(data);
-  };
-  */
   function Uint82Blob(data) {
-    // https://stackoverflow.com/questions/44147912/arraybuffer-to-blob-conversion
-    // https://developers.google.com/web/updates/2012/06/Don-t-Build-Blobs-Construct-Them
     return new Blob([new Uint8Array(data)]);
   };
   function bin2ab(data) {
-    // much faster than bin2uint8
     var enc = new TextEncoder();  // always utf-8
     return enc.encode(data);
   };
