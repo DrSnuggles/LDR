@@ -1,8 +1,5 @@
 **Amiga Decruncher Copper Bars for HTML Canvas**
 
-The idea is to visualize the depacking of some JS typical decrunchers like:
-- JSZIP
-- ZIP.JS
-- JSXcompressor
-- pako
-- LH4
+LDR (LoadDecrunchRun or Loader) by DrSnuggles
+LDR is the successor of Decrunch.js
+After visualizing decrunching process i also want to show the loading process

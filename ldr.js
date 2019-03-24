@@ -1,11 +1,11 @@
-/*  Decruncher by DrSnuggles
-  Amiga copperbars style canvas for popular javascript depackers
-  It's not just random colors
+/*  LDR (LoadDecrunchRun or Loader) by DrSnuggles
+  LDR is the successor of Decrunch.js
+  After visualizing decrunching process i also want to show the loading process
 */
 
 "use strict";
 
-var Decruncher = (function() {
+var LDR = (function() {
   //
   // Init
   //
@@ -21,15 +21,6 @@ var Decruncher = (function() {
   raf,                  // requestAnimationFrame, needed for cancel
   ctx,                  // canvas 2d context so i do not need to get this every frame
   loadedPackers = [],   // already loaded packers, do not load them twice
-  /*
-  packers_local = {     // local resources for the supported packers
-    "zipjs" : "packers/zip.js/zip.js",
-    "jszip" : "packers/jszip.js",
-    "jsx" : "packers/jsxcompressor.min.js",
-    "pako" : "packers/pako_inflate.js",
-    "lh4" : "packers/lh4.js",
-  },
-  */
   packers = {           // CDN resources for the supported packers
     "jszip" : "//gitcdn.xyz/repo/Stuk/jszip/master/dist/jszip.min.js",
     "zipjs" : "packers/zip.js/zip.js",

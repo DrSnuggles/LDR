@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>AmigaStyle Decrunch with Canvas by DrSnuggles</title>
-  <script src="decruncher.js"></script>
+  <title>LDR - Loader - LoadDecrunchRun by DrSnuggles</title>
+  <script src="ldr.js"></script>
   <style>
     * {
       background-color: transparent;
@@ -15,7 +15,8 @@
 </head>
 <body>
 
-<p>Please choose a library and click "Unpack"</p>
+<p>LDR a branch of Decruncher</p>
+<p></p>
 
 <select id="packer">
   <option value="jszip">JSZip (archive) (default)</option>
@@ -54,32 +55,32 @@ Lines (<span id="linesSet">256</span>): <input id="lines" type="range" min="1" m
 <script>
   function demoDepack1() {
     // this function sets the options as new default, nice if you have more than one file to decrunch
-    Decruncher.packer = packer.value;
-    Decruncher.background = background.value === "true";
-    Decruncher.fullscreen = fullscreen.value === "true";
-    Decruncher.lines = lines.value;
-    Decruncher.depackURL("testzip.zip", letsContinue);
+    LDR.packer = packer.value;
+    LDR.background = background.value === "true";
+    LDR.fullscreen = fullscreen.value === "true";
+    LDR.lines = lines.value;
+    LDR.depackURL("//modland.com/allmods.zip", letsContinue);
   }
 
   function demoDepack2() {
     // do not change default settings but use given arguments
-    Decruncher.depackURL("testzip.zip", letsContinue, packer.value, (background.value==="true"), (fullscreen.value==="true"), lines.value);
+    LDR.depackURL("//modland.com/allmods.zip", letsContinue, packer.value, (background.value==="true"), (fullscreen.value==="true"), lines.value);
   }
 
   function demoDepack3() {
     // minimal
-    Decruncher.depackURL("testzip.zip", letsContinue);
+    LDR.depackURL("//modland.com/allmods.zip", letsContinue);
   }
 
   function demoDepack4() {
     // just unpack
-    Decruncher.visualOutput = false;
-    Decruncher.depackURL("testzip.zip", letsContinue);
+    LDR.visualOutput = false;
+    LDR.depackURL("//modland.com/allmods.zip", letsContinue);
   }
 
   function letsContinue(data) {
     output.value = data.substr(0, 1000) +"...";
-    Decruncher.visualOutput = true; // set it back to default just coz of demoDepack4
+    LDR.visualOutput = true; // set it back to default just coz of demoDepack4
   }
 </script>
 
