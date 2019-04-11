@@ -23,7 +23,8 @@ var LDR = (function() {
   ctx,                  // canvas 2d context so i do not need to get this every frame
   loadedPackers = [],   // already loaded packers, do not load them twice
   packers = {           // CDN resources for the supported packers
-    "jszip" : "//gitcdn.xyz/repo/Stuk/jszip/master/dist/jszip.min.js",
+    "jszip" : "//cdn.jsdelivr.net/gh/Stuk/jszip/dist/jszip.min.js",
+    "jszip_internalservererror" : "//gitcdn.xyz/repo/Stuk/jszip/master/dist/jszip.min.js",
     "zipjs" : "packers/zip.js/zip.js",
     "jsx" : "//gitcdn.xyz/repo/jsxgraph/jsxgraph/master/JSXCompressor/jsxcompressor.min.js",
     "pako" : "//gitcdn.xyz/repo/nodeca/pako/master/dist/pako_inflate.min.js",
@@ -158,6 +159,7 @@ var LDR = (function() {
     document.head.appendChild(script);
   };
   function xhr(src, cb, responseType) {
+    // knows special responseType="binary"
     console.time("XHR load ("+responseType+") "+src);
     var xhr = new XMLHttpRequest();
     startRenderer(my.background, my.fullscreen, my.lines, xhr);
@@ -323,19 +325,24 @@ var LDR = (function() {
   // Public
   //
   my.depackURL = function (url, cb) {
-    // arguments are just use for this single request not changing the default
+    // get defaults from object
     var packer = this.packer;
     var background = this.background;
     var fullscreen = this.fullscreen;
     var lines = this.lines;
+    log("depackURL ("+ packer +"): "+ url);
+    // overwrite with arguments for single use
     if (arguments[2] !== undefined) packer = arguments[2];
     if (arguments[3] !== undefined) background = arguments[3];
     if (arguments[4] !== undefined) fullscreen = arguments[4];
     if (arguments[5] !== undefined) lines = arguments[5];
-    log("depackURL ("+ packer +"): "+ url);
     checkPacker(packer, function(){
       dePacker(url, packer, background, fullscreen, lines, cb);
     });
+  };
+  my.loadURL = function (url, cb, responseType) {
+    log("loadURL ("+ responseType +"): "+ url);
+    xhr(url, cb, responseType);
   };
 
   //
