@@ -116,30 +116,32 @@ var LDR = (function() {
 
       currentPos = oldLength
     */
-    var newLength = part.responseText.length;
-    if (newLength !== currentPos) {
-      //console.log("i will paint coz currentpos: "+currentPos+" !== "+ newLength);
-      var newData = part.responseText.substr(currentPos, newLength-currentPos);
-      newData = bin2ab(newData);
-      //log("received bytes: "+ (newLength - currentPos));
-      //log("received bytes: "+ (newData.length));
-      for (var i = 0; i < newData.length; i+=3) {
-        //ctx.beginPath();
-        ctx.fillStyle = "rgb("+ newData[i] +", "+ newData[i+1] +", "+ newData[i+2] +")";
-        ctx.fillRect(currentX, currentY, 1, 1);
-        //ctx.stroke();
-        currentX++;
-        if (currentX >= width) {
-          // go 8 pixels deeper, like interlace
-          currentX = 0;
-          currentY += 8;
+    if (part.responseType !== 'blob') { // blobs do not have that...
+      var newLength = part.responseText.length;
+      if (newLength !== currentPos) {
+        //console.log("i will paint coz currentpos: "+currentPos+" !== "+ newLength);
+        var newData = part.responseText.substr(currentPos, newLength-currentPos);
+        newData = bin2ab(newData);
+        //log("received bytes: "+ (newLength - currentPos));
+        //log("received bytes: "+ (newData.length));
+        for (var i = 0; i < newData.length; i+=3) {
+          //ctx.beginPath();
+          ctx.fillStyle = "rgb("+ newData[i] +", "+ newData[i+1] +", "+ newData[i+2] +")";
+          ctx.fillRect(currentX, currentY, 1, 1);
+          //ctx.stroke();
+          currentX++;
+          if (currentX >= width) {
+            // go 8 pixels deeper, like interlace
+            currentX = 0;
+            currentY += 8;
+          }
+          if (currentY >= height) {
+            currentY = currentY % height + 1;
+            overflow++; // stop after 8 times do not overwrite old data. makes it faster
+          }
         }
-        if (currentY >= height) {
-          currentY = currentY % height + 1;
-          overflow++; // stop after 8 times do not overwrite old data. makes it faster
-        }
+        currentPos = newLength; // i don't care if i will lose data here. maybe array is not divable by 3
       }
-      currentPos = newLength; // i don't care if i will lose data here. maybe array is not divable by 3
     }
     // and again...
     if (overflow < 8) { // do not render rest.. makes it slower
