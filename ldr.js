@@ -116,7 +116,7 @@ var LDR = (function() {
 
       currentPos = oldLength
     */
-    if (part.responseType !== 'blob') { // blobs do not have that...
+    if (part.responseType === '' || part.responseType === 'text') { // blobs do not have that...
       var newLength = part.responseText.length;
       if (newLength !== currentPos) {
         //console.log("i will paint coz currentpos: "+currentPos+" !== "+ newLength);
