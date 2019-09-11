@@ -2,6 +2,10 @@
   LDR is the successor of Decrunch.js
   After visualizing decrunching process i also want to show the loading process
   640x512 = 327680 Pixel. Each needs 3 Bytes for color = 983040Bytes = 960kB = 0.9375MB per screen
+
+History:
+0.2 Evoke2019 result demo update (needed blob, arraybuffer for other libs)
+0.1 initial release
 */
 
 "use strict";
@@ -11,7 +15,7 @@ var LDR = (function() {
   // Init
   //
   var my = {            // holds all public available functions/properties
-    version : "0.1",    // version
+    version : "0.2",    // version
     packer : "jszip",   // used depacking library
     visualOutput : true,// enable/disable the whole point of this lib, never set it to false !!! ;)
     lines : 256,        // 256 amiga lines
