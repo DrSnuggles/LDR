@@ -4,6 +4,8 @@
   640x512 = 327680 Pixel. Each needs 3 Bytes for color = 983040Bytes = 960kB = 0.9375MB per screen
 
 History:
+0.4 added LoadHead function
+0.3 jsZIP returns Arraybuffer, needed for scriptprocessor_player input, stopRenderer kills one item (multiple parallel load)
 0.2 Evoke2019 result demo update (needed blob, arraybuffer for other libs)
 0.1 initial release
 */
@@ -15,12 +17,12 @@ var LDR = (function() {
   // Init
   //
   var my = {            // holds all public available functions/properties
-    version : "0.2",    // version
+    version : "0.4",    // version
     packer : "jszip",   // used depacking library
     visualOutput : true,// enable/disable the whole point of this lib, never set it to false !!! ;)
     lines : 256,        // 256 amiga lines
     background : true,  // background or foreground
-    fullscreen : true,  // fullscreen or border only
+    fullscreen : false,  // fullscreen or border only
   },
   debug = false,        // duration times will still be displayed in console
   raf,                  // requestAnimationFrame, needed for cancel
@@ -104,7 +106,8 @@ var LDR = (function() {
     raf = requestAnimationFrame(function(){renderRenderer(canvas.width, canvas.height, part)});
   };
   function stopRenderer() {
-    document.body.removeChild(ldrcanvas);
+    var rem = document.getElementById("ldrcanvas"); //0.3 workaround when more than one ldrcanvas gets created
+    document.body.removeChild(rem);
     cancelAnimationFrame(raf);
   };
   function renderRenderer(width, height, part) {
@@ -152,17 +155,18 @@ var LDR = (function() {
       raf = requestAnimationFrame(function(){renderRenderer(width, height, part)});
     }
   };
-  function addScript(src, cb) {
-    // .onprogress not possible on script
-    // maybe switch to xhr
-    console.time("addScript "+src);
-    var script = document.createElement("script");
-    script.onload = function(){
-      console.timeEnd("addScript "+src);
-      if (cb) cb();
-    };
-    script.src = src;
-    document.head.appendChild(script);
+  function loadHead(tag, url, cb) {
+    xhr(url, function(txt) {
+      addHead(tag, txt, cb);
+    }, 'text');
+  };
+  function addHead(tag, txt, cb) {
+    var tmp = document.createElement(tag);
+    tmp.type = (tag==='script')? 'text/javascript':'text/css';
+    //tmp.text = txt; // works for script only
+    tmp.appendChild(document.createTextNode(txt)); // works for script and style
+    document.head.appendChild(tmp);
+    if (cb) cb();
   };
   function xhr(src, cb, responseType) {
     // knows special responseType="binary"
@@ -208,11 +212,13 @@ var LDR = (function() {
   function checkPacker(packer, cb) {
     // check if we need to load the lib
     if (!loadedPackers.includes(packer)) {
-      addScript(CDN+packers[packer], function(){
-        log("checkPacker had to load: "+ packer);
-        loadedPackers.push(packer);
-        if (cb) return cb();
-      });
+      xhr(CDN+packers[packer], function(txt) {
+        addHead('script', txt, function() {
+          log("checkPacker had to load: "+ packer);
+          loadedPackers.push(packer);
+          if (cb) return cb();
+        });
+      }, 'text');
     } else {
       // already loaded
       if (cb) return cb();
@@ -277,13 +283,14 @@ var LDR = (function() {
                 if (my.visualOutput) {
                   startCopperbars(background, fullscreen, lines);
                 }
-
-                d.files[i].async("string").then(function (txt){
+                // now using ArrayBuffer as return
+                d.files[i].async("ArrayBuffer").then(function (txt){
 
                   console.timeEnd("Decrunch single file");
                   if (my.visualOutput) {
                     stopCopperbars();
                   }
+
                   if (cb) cb(txt);
 
                 }, function (err){
@@ -350,6 +357,7 @@ var LDR = (function() {
     log("loadURL ("+ responseType +"): "+ url);
     xhr(url, cb, responseType);
   };
+  my.loadHead = loadHead;
 
   //
   // Exit
