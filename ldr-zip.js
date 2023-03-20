@@ -5,7 +5,7 @@
 	OR informative. % loaded OR packed gzip/br
 */
 
-//import * as UZIP from './uzip-greggman-unpack.js'
+import * as UZIP from './uzip-greggman-unpack.js'
 
 let ctx, fetchReader
 
@@ -56,43 +56,38 @@ export const LDR = {
 			position += chunk.length
 		}
 		o.dat = chunksAll
-		// exit(o,ob)
-		stopCopperbars()
-		if (cb) cb(o)
 
 		// now the depacker via dynamic import ?? not sure if i like that, would be nicer to have a all in one solution
-		// if (chunksAll[0] === 80 && chunksAll[1] === 75) {
-		// 	// PK, try to unzip
-		// 	try {
-		// 		o.dat = uzip.parse(chunksAll)
-		// 	}catch(e){
-		// 		console.error(e)
-		// 	}
-		// 	exit(o,cb)
-		// 	/*
-		// 	import('./uzip-greggman-unpack.js')
-		// 	.then(m => {
-		// 		o.dat = uzip.parse(chunksAll)
-		// 		exit(o,cb)
-		// 	})
-		// 	.catch(e=>{
-		// 		// uzip couldn't depack
-		// 		console.error(e)
-		// 		exit(o,cb)
-		// 	})
-		// 	*/
-		// } else {
-		// 	// not packed
-		// 	exit(o,cb)
-		// }
+		if (chunksAll[0] === 80 && chunksAll[1] === 75) {
+			// PK, try to unzip
+			try {
+				o.dat = uzip.parse(chunksAll)
+			}catch(e){
+				console.error(e)
+			}
+			exit(o,cb)
+			/*
+			import('./uzip-greggman-unpack.js')
+			.then(m => {
+				o.dat = uzip.parse(chunksAll)
+				exit(o,cb)
+			})
+			.catch(e=>{
+				// uzip couldn't depack
+				console.error(e)
+				exit(o,cb)
+			})
+			*/
+		} else {
+			// not packed
+			exit(o,cb)
+		}
 	},
 }
-/*
 function exit(o, cb) {
 	stopCopperbars()
 	if (cb) cb(o)
 }
-*/
 function startCopperbars() {
 	stopCopperbars()
 	const canvas = document.createElement('canvas')
