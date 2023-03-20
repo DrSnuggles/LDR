@@ -40,6 +40,7 @@
 		// was it a zip? check mime type
 		const decoder = new TextDecoder()
 		let txt
+		output.value = ''
 		if (o.typ === "application/zip") {
 			output.value = "ZIP contains: "+ JSON.stringify(Object.keys(o.dat)) +"\n"
 			txt = decoder.decode(o.dat["allmods.txt"])
@@ -49,7 +50,7 @@
 			// display it
 			txt = decoder.decode(o.dat)
 		}
-		output.value = txt.substring(0, 1000) +"..."
+		output.value += txt.substring(0, 1000) +"..."
 
 	}
 </script>
