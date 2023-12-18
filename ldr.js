@@ -6,6 +6,7 @@
 */
 
 //import * as UZIP from './uzip-greggman-unpack.js'
+import {Loader} from './loader.js'
 
 const fetchReaders = []
 let ctx
@@ -16,90 +17,14 @@ export const LDR = {
 	abort: (reader) => {stopCopperbars(reader)},
 	loadURL: async (url, cb) => {
 		startCopperbars()
-
-		let response = await fetch(url)
-		const thisReader = response.body.getReader()
-		fetchReaders.push( thisReader )
-		const contentType = response.headers.get('Content-Type')
-		const contentLength = response.headers.get('Content-Length') // not trustworth for array init (could be compressed)
-		const contentEncoding = response.headers.get('Content-Encoding')
-		// https://developer.mozilla.org/en-US/docs/Web/API/PerformanceResourceTiming/nextHopProtocol
-		/*
-		const resources = performance.getEntriesByType('resource')
-		const prot = resources[resources.length-1].nextHopProtocol	// depends on HTTP Header Timing-Allow-Origin
-		console.log(resources[resources.length-1].name)
-		*/
-		let chunks = []
-		let o = {
-			url: url,
-			typ: contentType,
-			len: contentLength*1,
-			enc: contentEncoding,
-			//prot: prot,		// was wrong   performance.getEntriesByType('navigation')[0].nextHopProtocol,			// only if nextHop is on main server ;)
-			rec: 0,
-			dat: false,
-			start: timestamp(),
-		}
-		//console.log( JSON.stringify(o) )
-		while(true) {
-			const {done, value} = await thisReader.read()
-			if (done) break
-			chunks.push(value)
-			//if (o.rec == 0) console.log(value.length)
-			
-			o.rec += value.length
-			renderCopperbars(value, o.rec, o.len, o.enc, o.prot) // use new one to reach 100% (at least for unencoded content)
-
+		const thisReader = new Loader(url, (o) => {
+			renderCopperbars(o.chunk, o.rec, o.len, o.enc, o.prot)
 			if (cb) cb(o)
-		}
-		// necessary ?? would love to get rid of this... contentLength is not save for Uint8 init (packed content)
-		let chunksAll = new Uint8Array(o.rec)
-		let position = 0
-		for(let chunk of chunks) {
-			chunksAll.set(chunk, position)
-			position += chunk.length
-		}
-		o.dat = chunksAll
-		o.end = timestamp()
-		o.dur = o.end - o.start
-		o.bps = o.len*8 / o.dur	// len = transfered | rec = unpacked
-		// exit(o,ob)
-		stopCopperbars(thisReader)
-		if (cb) cb(o)
-
-		// now the depacker via dynamic import ?? not sure if i like that, would be nicer to have a all in one solution
-		// if (chunksAll[0] === 80 && chunksAll[1] === 75) {
-		// 	// PK, try to unzip
-		// 	try {
-		// 		o.dat = uzip.parse(chunksAll)
-		// 	}catch(e){
-		// 		console.error(e)
-		// 	}
-		// 	exit(o,cb)
-		// 	/*
-		// 	import('./uzip-greggman-unpack.js')
-		// 	.then(m => {
-		// 		o.dat = uzip.parse(chunksAll)
-		// 		exit(o,cb)
-		// 	})
-		// 	.catch(e=>{
-		// 		// uzip couldn't depack
-		// 		console.error(e)
-		// 		exit(o,cb)
-		// 	})
-		// 	*/
-		// } else {
-		// 	// not packed
-		// 	exit(o,cb)
-		// }
+			if (o.dat) stopCopperbars(thisReader)
+		})
+		fetchReaders.push( thisReader )
 	},
 }
-/*
-function exit(o, cb) {
-	stopCopperbars()
-	if (cb) cb(o)
-}
-*/
 function startCopperbars() {
 	//stopCopperbars()
 	if (document.getElementById('copperbars')) return
@@ -113,7 +38,7 @@ function startCopperbars() {
 }
 function stopCopperbars(reader) {
 	if (reader) {
-		reader.cancel()
+		reader.abort()
 		const actReaderIndx = fetchReaders.indexOf(reader)
 		fetchReaders.splice(actReaderIndx, 1)
 	}
@@ -194,8 +119,4 @@ function renderCopperbars(data, rec, len, enc, prot) {
 }
 function lerp(a, b, n) {
 	return (1-n)*a + n*b
-}
-function timestamp() {
-	//return new Date().getTime()						// ms
-	return performance.timeOrigin + performance.now()	// ms with fractions (10000ths = 0.1 µ = 100n)
 }
