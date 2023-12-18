@@ -7,17 +7,19 @@
 
 //import * as UZIP from './uzip-greggman-unpack.js'
 
-let ctx, fetchReader
+const fetchReaders = []
+let ctx
 
 export const LDR = {
 	background: true,	// background or foreground
 	fullscreen: true,	// fullscreen or border only
-	abort: stopCopperbars,
+	abort: (reader) => {stopCopperbars(reader)},
 	loadURL: async (url, cb) => {
 		startCopperbars()
 
 		let response = await fetch(url)
-		fetchReader = response.body.getReader()
+		const thisReader = response.body.getReader()
+		fetchReaders.push( thisReader )
 		const contentType = response.headers.get('Content-Type')
 		const contentLength = response.headers.get('Content-Length') // not trustworth for array init (could be compressed)
 		const contentEncoding = response.headers.get('Content-Encoding')
@@ -31,14 +33,16 @@ export const LDR = {
 		let o = {
 			url: url,
 			typ: contentType,
-			len: contentLength,
+			len: contentLength*1,
 			enc: contentEncoding,
 			//prot: prot,		// was wrong   performance.getEntriesByType('navigation')[0].nextHopProtocol,			// only if nextHop is on main server ;)
 			rec: 0,
+			dat: false,
+			start: timestamp(),
 		}
 		//console.log( JSON.stringify(o) )
 		while(true) {
-			const {done, value} = await fetchReader.read()
+			const {done, value} = await thisReader.read()
 			if (done) break
 			chunks.push(value)
 			//if (o.rec == 0) console.log(value.length)
@@ -56,8 +60,11 @@ export const LDR = {
 			position += chunk.length
 		}
 		o.dat = chunksAll
+		o.end = timestamp()
+		o.dur = o.end - o.start
+		o.bps = o.len*8 / o.dur	// len = transfered | rec = unpacked
 		// exit(o,ob)
-		stopCopperbars()
+		stopCopperbars(thisReader)
 		if (cb) cb(o)
 
 		// now the depacker via dynamic import ?? not sure if i like that, would be nicer to have a all in one solution
@@ -94,7 +101,9 @@ function exit(o, cb) {
 }
 */
 function startCopperbars() {
-	stopCopperbars()
+	//stopCopperbars()
+	if (document.getElementById('copperbars')) return
+
 	const canvas = document.createElement('canvas')
 	canvas.id = 'copperbars'
 	const zIndex = LDR.background ? -604 : 604
@@ -102,9 +111,15 @@ function startCopperbars() {
 	if (!document.getElementById('copperbars')) document.body.appendChild(canvas)
 	ctx = canvas.getContext('2d',{alpha: (!LDR.background)})
 }
-function stopCopperbars() {
-	if (fetchReader) fetchReader.cancel()
-	if (document.getElementById('copperbars')) document.body.removeChild( document.getElementById('copperbars') )
+function stopCopperbars(reader) {
+	if (reader) {
+		reader.cancel()
+		const actReaderIndx = fetchReaders.indexOf(reader)
+		fetchReaders.splice(actReaderIndx, 1)
+	}
+	if (fetchReaders.length === 0) {
+		if (document.getElementById('copperbars')) document.body.removeChild( document.getElementById('copperbars') )
+	}
 }
 function renderCopperbars(data, rec, len, enc, prot) {
 	// https://developer.mozilla.org/en-US/docs/Web/API/PerformanceResourceTiming/nextHopProtocol
@@ -179,4 +194,8 @@ function renderCopperbars(data, rec, len, enc, prot) {
 }
 function lerp(a, b, n) {
 	return (1-n)*a + n*b
+}
+function timestamp() {
+	//return new Date().getTime()						// ms
+	return performance.timeOrigin + performance.now()	// ms with fractions (10000ths = 0.1 µ = 100n)
 }

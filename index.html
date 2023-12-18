@@ -8,7 +8,7 @@
       background-color: transparent;
     }
     textarea {
-      width: 100%;
+      width: 45%;
     }
   </style>
 </head>
@@ -21,28 +21,29 @@
 	<button onclick="loadBR();">Load BR 3.8 MB HTTP3</button>
 </p>
 
-<textarea id="output" rows="20"></textarea>
+<textarea id="outputL" rows="20"></textarea>
+<textarea id="outputR" rows="20"></textarea>
 
 <script type="module">
-	import {LDR} from "./ldr-zip.min.js"
+	//import {LDR} from "./ldr-zip.min.js"
+	import {LDR} from "./ldr-zip.js"
 
 	window.loadZIP = () => {
-		LDR.loadURL("https://modland.com/allmods.zip", letsContinue)
+		LDR.loadURL("https://modland.com/allmods.zip", letsContinueL)
 	}
 
 	window.loadBR = () => {
-		LDR.loadURL("https://drsnuggles.net/libopenmpt/allmods.txt", letsContinue)
+		LDR.loadURL("https://drsnuggles.net/libopenmpt/allmods.txt", letsContinueR)
 	}
-
-	window.letsContinue = (o) => {
+	window.letsContinueL = (o) => {
 		if (!o.dat) return // not yet ready, progress for display %
-		
+		console.log('L',o)
 		// was it a zip? check mime type
 		const decoder = new TextDecoder()
 		let txt
-		output.value = ''
+		outputL.value = ''
 		if (o.typ === "application/zip") {
-			output.value = "ZIP contains: "+ JSON.stringify(Object.keys(o.dat)) +"\n"
+			outputL.value = "ZIP contains: "+ JSON.stringify(Object.keys(o.dat)) +"\n"
 			txt = decoder.decode(o.dat["allmods.txt"])
 		} else {
 			// default
@@ -50,9 +51,18 @@
 			// display it
 			txt = decoder.decode(o.dat)
 		}
-		output.value += txt.substring(0, 1000) +"..."
-
+		outputL.value += txt.substring(0, 1000) +"..."
 	}
+	window.letsContinueR = (o) => {
+		if (!o.dat) return // not yet ready, progress for display %
+		console.log('R',o)
+		const decoder = new TextDecoder()
+		outputR.value = decoder.decode(o.dat).substring(0, 1000) +"..."
+	}
+
+	loadZIP()
+	loadBR()
+
 </script>
 
 </body>
