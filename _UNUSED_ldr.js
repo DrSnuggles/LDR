@@ -9,24 +9,23 @@
 import {Loader} from './loader.js'
 
 const fetchReaders = []
-let ctx
+let canvasWorker
 
 export const LDR = {
 	background: true,	// background or foreground
 	fullscreen: true,	// fullscreen or border only
 	abort: (reader) => {stopCopperbars(reader)},
 	loadURL: async (url, cb) => {
-		startCopperbars()
+		initCanvas()
 		const thisReader = new Loader(url, (o) => {
-			renderCopperbars(o.chunk, o.rec, o.len, o.enc, o.prot)
+			canvasWorker.postMessage({o:{chunk:o.chunk, enc:o.enc, rec: o.rec, len: o.len, prot: o.prot}})
 			if (cb) cb(o)
 			if (o.dat) stopCopperbars(thisReader)
 		})
 		fetchReaders.push( thisReader )
 	},
 }
-function startCopperbars() {
-	//stopCopperbars()
+function initCanvas() {
 	if (document.getElementById('copperbars')) return
 
 	const canvas = document.createElement('canvas')
@@ -35,16 +34,24 @@ function startCopperbars() {
 	canvas.style = 'position:absolute;top:'+scrollY+'px;left:0;width:100%;height:100%;image-rendering:pixelated;z-index:'+ zIndex +';'
 	onscroll = (ev) => { canvas.style.top = scrollY +'px' }
 	if (!document.getElementById('copperbars')) document.body.appendChild(canvas)// document.body.insertBefore(canvas, document.body.firstChild)
-	ctx = canvas.getContext('2d',{alpha: (!LDR.background)})
+
+	canvasWorker = new Worker(new URL('./canvas.worker.js', import.meta.url), {type: 'module'}) // import.meta.url: https://stackoverflow.com/questions/12417216/javascript-not-resolving-worker-path-relative-to-current-script
+	canvas.width = screen.width
+	canvas.height = screen.height
+	const offscreen = canvas.transferControlToOffscreen()
+	canvasWorker.postMessage({	 // its nicer to pack the transfered objects into a new one
+		canvas: offscreen,
+		devicePixelRatio: devicePixelRatio,
+		fullscreen: LDR.fullscreen,
+		background: LDR.background,
+	}, [offscreen])
+
 }
 function stopCopperbars(reader) {
 	if (reader) {
 		reader.abort()
 		const actReaderIndx = fetchReaders.indexOf(reader)
 		fetchReaders.splice(actReaderIndx, 1)
-	}
-	if (fetchReaders.length === 0) {
-		if (document.getElementById('copperbars')) document.body.removeChild( document.getElementById('copperbars') )
 	}
 }
 function renderCopperbars(data, rec, len, enc, prot) {
