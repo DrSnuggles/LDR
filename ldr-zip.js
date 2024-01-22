@@ -13,6 +13,8 @@ export const LDR = {
 	fullscreen: L.fullscreen,
 	abort: L.abort,
 	loadURL: async (url, cb) => {
+		L.background = LDR.background	// Todo: bit hacky way to transport the settings :(
+		L.fullscreen = LDR.fullscreen
 		L.loadURL(url, (o) => {
 			if (cb && !o.dat) cb (o)
 			if (o.dat) unpack(o, cb)

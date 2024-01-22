@@ -8,10 +8,19 @@ export class Loader {
 		this.load(url, cb)
 	}
 
-	abort () { this.reader.cancel() }
+	//abort () { this.reader.cancel() }
 
 	async load(url, cb) {
-		let response = await fetch(url)
+		let response
+		try {
+			response = await fetch(url)
+		} catch(e) {
+			//console.log('shit')
+			//console.error(e)
+			if (cb) cb(false)
+			return	// stop here!
+		}
+
 		this.reader = response.body.getReader()
 		const contentType = response.headers.get('Content-Type')
 		const contentLength = response.headers.get('Content-Length') // not trustworth for array init (could be compressed)
@@ -65,5 +74,5 @@ export class Loader {
 
 function timestamp() {
 	//return new Date().getTime()						// ms
-	return performance.timeOrigin + performance.now()	// ms with fractions (10000ths = 0.1 µ = 100n)
+	return performance.timeOrigin + performance.now()	// ms with fractions
 }

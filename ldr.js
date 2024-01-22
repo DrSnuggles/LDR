@@ -17,12 +17,19 @@ export const LDR = {
 	abort: (reader) => {stopCopperbars(reader)},
 	loadURL: async (url, cb) => {
 		startCopperbars()
-		const thisReader = new Loader(url, (o) => {
+		new Loader(url, (o) => {
+			if (!o) {
+				// error
+				console.error('LDR encountered an error while loading URL:', url)
+				stopCopperbars(url)
+				if (cb) cb(false)
+				return
+			}
 			renderCopperbars(o.chunk, o.rec, o.len, o.enc, o.prot)
 			if (cb) cb(o)
-			if (o.dat) stopCopperbars(thisReader)
+			if (o.dat) stopCopperbars(url)
 		})
-		fetchReaders.push( thisReader )
+		fetchReaders.push( url )
 	},
 }
 function startCopperbars() {
@@ -35,13 +42,13 @@ function startCopperbars() {
 	canvas.style = 'position:absolute;top:'+scrollY+'px;left:0;width:100%;height:100%;image-rendering:pixelated;z-index:'+ zIndex +';'
 	onscroll = (ev) => { canvas.style.top = scrollY +'px' }
 	if (!document.getElementById('copperbars')) document.body.appendChild(canvas)// document.body.insertBefore(canvas, document.body.firstChild)
-	ctx = canvas.getContext('2d',{alpha: (!LDR.background)})
+	//ctx = canvas.getContext('2d',{alpha: (!LDR.background)})
+	ctx = canvas.getContext('2d',{alpha: false})
 }
-function stopCopperbars(reader) {
-	if (reader) {
-		reader.abort()
-		const actReaderIndx = fetchReaders.indexOf(reader)
-		fetchReaders.splice(actReaderIndx, 1)
+function stopCopperbars(url) {
+	if (url) {
+		const idx = fetchReaders.indexOf(url)
+		fetchReaders.splice(idx, 1)
 	}
 	if (fetchReaders.length === 0) {
 		if (document.getElementById('copperbars')) document.body.removeChild( document.getElementById('copperbars') )
